@@ -7,22 +7,12 @@ from langchain.chat_models import (
 )  # Importing 'ChatOpenAI' from a custom module
 from langchain.chains import LLMChain  # Importing 'LLMChain' from a custom module
 from third_parties.linkedin import scrape_linkedin_profile
-from agents.linkedin_lookup_agent import lookup
+from third_parties.twitter import scrape_user_tweets
+from agents.linkedin_lookup_agent import linkedin_lookup_agent
+from agents.twitter_lookup_agent import twitter_lookup_agent
 
-# Input from the user asking for information about a product
-information = """
-Plantique Smart Indoor Garden
-ab 649,00 €
-
-Entdecke automatische und energieeffiziente Beleuchtung sowie Bewässerung, die optimal auf die Bedürfnisse deiner Pflanzen abgestimmt ist. Diese Lösung schont Ressourcen und bietet einen erheblichen Ertrag auf kleinstem Raum mit über 20 Pflanzplätzen.
-
-Dank seiner kompakten Größe und modernen Gestaltung fügt sich Plantique perfekt in dein Zuhause ein.
-
-Genieße nährstoffreichere und gesündere Ernten mit Anbau ohne Pestizide, direkt aus deinem eigenen Indoor-Garten.
-"""
-
-name = "Martin Mohammed"
-company = "IBM"
+name = "Elon Musk"
+company = "Tesla"
 
 # Only execute if this file was executed directly.
 if __name__ == "__main__":
@@ -33,15 +23,17 @@ if __name__ == "__main__":
 
     # The prompt template containing a placeholder {information}
     summary_template = """
-    Given the LinkedIn information '{information}' about a person, I want you to create:
+    Given the LinkedIn information '{linkedin_information}' and twitter {twitter_information} about a person, I want you to create:
     1. a short summary
     2. two interesting facts about them
+    3. A topic that may interest them
+    4. 2 Creative Ice breakers to open a conversation with them
     And please make clear which response of you is related to which question:
     """
 
     # PromptTemplate contains variables and a template to create prompts
     summary_prompt_template = PromptTemplate(
-        input_variables=["information"], template=summary_template
+        input_variables=["linkedin_information", "twitter_information"], template=summary_template
     )
 
     # Setting up a language model to be used for generating responses
@@ -52,10 +44,14 @@ if __name__ == "__main__":
 
     # Chain setup: Using the ChatModel with the specified language model and prompt template
     chain = LLMChain(llm=llm, prompt=summary_prompt_template)
-    linkedin_profile_url = lookup(name=name, company=company)
+    linkedin_profile_url = linkedin_lookup_agent(name=name, company=company)
     linkedin_data = scrape_linkedin_profile(linkedin_profile_url=linkedin_profile_url)
 
+    twitter_username = twitter_lookup_agent(name=name)
+    tweets = scrape_user_tweets(username=twitter_username, num_tweets=100)
+
+
     # Running the chain using the user's provided information as a parameter
-    print(chain.run(information=linkedin_data))
+    print(chain.run(linkedin_information=linkedin_data, twitter_information=tweets))
 
     # Now we can run this chain with different parameter values inside the prompt template.
