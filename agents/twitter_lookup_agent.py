@@ -3,8 +3,9 @@ from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.chat_models import ChatOpenAI
 from tools.tools import get_profile_url
 
-def twitter_lookup_agent(name: str) -> str: 
-      # Setting up the language model (LLM) from ChatOpenAI with specific configurations
+
+def twitter_lookup_agent(name: str) -> str:
+    # Setting up the language model (LLM) from ChatOpenAI with specific configurations
     llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
 
     # The template is the expected response format that the system needs to generate – in this case, a LinkedIn URL.
@@ -41,9 +42,7 @@ def twitter_lookup_agent(name: str) -> str:
 
     # Running the Agent to obtain the LinkedIn profile URL for the provided individual's name.
     response = agent.run(
-        linkedin_profile_url_prompt_template.format_prompt(
-            name_of_person=name
-        )
+        linkedin_profile_url_prompt_template.format_prompt(name_of_person=name)
     )
     twitter_username = response.split("[")[1].split("]")[0]
     return twitter_username

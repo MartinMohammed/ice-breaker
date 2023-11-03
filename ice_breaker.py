@@ -10,17 +10,20 @@ from third_parties.linkedin import scrape_linkedin_profile
 from third_parties.twitter import scrape_user_tweets
 from agents.linkedin_lookup_agent import linkedin_lookup_agent
 from agents.twitter_lookup_agent import twitter_lookup_agent
+from output_parsers import person_intel_parser, PersonIntel
+from typing import Tuple
+
+# Fetches the OpenAI API key from the environment variables, providing a default message if not set
+OPENAI_API_KEY = os.environ.get(
+    "OPENAI_API_KEY", "The environment variable 'OPENAI_API_KEY' is not set"
+)
 
 name = "Elon Musk"
 company = "Tesla"
 
-# Only execute if this file was executed directly.
-if __name__ == "__main__":
-    # Fetches the OpenAI API key from the environment variables, providing a default message if not set
-    OPENAI_API_KEY = os.environ.get(
-        "OPENAI_API_KEY", "The environment variable 'OPENAI_API_KEY' is not set"
-    )
 
+# Return PersonIntel isntance and profile picture url
+def ice_break(name: str, company: str) -> Tuple[PersonIntel, str]:
     # The prompt template containing a placeholder {information}
     summary_template = """
     Given the LinkedIn information '{linkedin_information}' and twitter {twitter_information} about a person, I want you to create:
@@ -28,12 +31,19 @@ if __name__ == "__main__":
     2. two interesting facts about them
     3. A topic that may interest them
     4. 2 Creative Ice breakers to open a conversation with them
-    And please make clear which response of you is related to which question:
+    \n{format_instructions}
     """
 
     # PromptTemplate contains variables and a template to create prompts
     summary_prompt_template = PromptTemplate(
-        input_variables=["linkedin_information", "twitter_information"], template=summary_template
+        input_variables=["linkedin_information", "twitter_information"],
+        template=summary_template,
+        # A way for us to provide a subset of the required input variables in the prompt template
+        # Injected directly into the prompt template without waiting for the chain to run.
+        partial_variables={
+            # tell llm that the output should be in that specific format (schema of the pydanticObject is plugged in).
+            "format_instructions": person_intel_parser.get_format_instructions()
+        },
     )
 
     # Setting up a language model to be used for generating responses
@@ -50,8 +60,15 @@ if __name__ == "__main__":
     twitter_username = twitter_lookup_agent(name=name)
     tweets = scrape_user_tweets(username=twitter_username, num_tweets=100)
 
-
     # Running the chain using the user's provided information as a parameter
-    print(chain.run(linkedin_information=linkedin_data, twitter_information=tweets))
+    result = chain.run(linkedin_information=linkedin_data, twitter_information=tweets)
+
+    # Return us a dictionary / instance of the PersonIntel class
+    return (person_intel_parser.parse(result), linkedin_data.get("profile_pic_url"))
 
     # Now we can run this chain with different parameter values inside the prompt template.
+
+
+# Only execute if this file was executed directly.
+if __name__ == "__main__":
+    ice_break(name=name, company=company)
